@@ -13,9 +13,18 @@ open class JSONParser {
     // MARK: - ERROR
     open static func parseError(JSONData: Data?)
     {
-        let json = JSON(data: JSONData!)
-
-        print(json)
+        do
+        {
+            if let JSONData = JSONData
+            {
+                let json = try JSON(data: JSONData)
+                print(json)
+            }
+        }
+        catch let error
+        {
+            print(error.localizedDescription)
+        }
     }
     
     open static func parseError(JSONString: String?)
