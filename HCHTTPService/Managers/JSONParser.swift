@@ -29,8 +29,20 @@ open class JSONParser {
     
     open static func parseError(JSONString: String?)
     {
-        let json = JSON(jsonString: JSONString!)
-        
-        print(json)
+        if let dataFromString = JSONString!.data(using: .utf8, allowLossyConversion: false) {
+            
+            let json:JSON = {
+                do {
+                    return try JSON(data: dataFromString)
+                }
+                catch let error
+                {
+                    print(error.localizedDescription)
+                    return JSON()
+                }
+            }()
+            
+            print(json)
+        }
     }
 }

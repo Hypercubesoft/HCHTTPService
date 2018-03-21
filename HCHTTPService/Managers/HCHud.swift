@@ -67,7 +67,7 @@ open class HCHud: NSObject, UIGestureRecognizerDelegate {
     }
     
     /// Method for hiding hud
-    open static func hideHUD()
+    @objc open static func hideHUD()
     {
         HUD.hide(animated:true)
     }

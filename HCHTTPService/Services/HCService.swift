@@ -60,7 +60,7 @@ public class HCService: NSObject {
         
         reachability.whenReachable = { reachability in
             DispatchQueue.main.async() {
-                if reachability.isReachableViaWiFi {
+                if reachability.connection == .wifi {
                     print("Reachable via WiFi")
                 } else {
                     print("Reachable via Cellular")
