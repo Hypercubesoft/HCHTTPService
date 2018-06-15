@@ -170,15 +170,22 @@ public class HCService: NSObject {
     ///   - header: Additional heders that are not included in session menager
     ///   - success: Success function
     ///   - failure: Failure function
-    open func imageUploadWithURL(_ strURL: String, path: String, images:[String :UIImage], params: [String : String]?, header: [String : String]?, success:@escaping(Any) -> Void, failure:@escaping (Any?,Int) -> Void)
+    open func imageUploadWithURL(_ strURL: String, path: String, images:[String :UIImage], params: [String : String]?, header: [String : String]?, JPEGcompression: CGFloat = 0.7, sendAsPNG: Bool = false, success:@escaping(Any) -> Void, failure:@escaping (Any?,Int) -> Void)
     {
         let request = try! URLRequest(url:strURL+path, method: .post, headers:header)
         
         Alamofire.upload(multipartFormData: { (multipartFormData) in
             
             for image in images {
-                let fileData = UIImagePNGRepresentation(image.value)!
-                multipartFormData.append(fileData, withName: image.key, fileName: "name", mimeType: "image/png")
+                if sendAsPNG
+                {
+                    let fileData = UIImagePNGRepresentation(image.value)!
+                    multipartFormData.append(fileData, withName: image.key, fileName: "name", mimeType: "image/png")
+                } else {
+                    let fileData = UIImageJPEGRepresentation(image.value, JPEGcompression)!
+                    multipartFormData.append(fileData, withName: image.key, fileName: "name", mimeType: "image/jpeg")
+                }
+                
             }
             
             for (key, value) in params! {
