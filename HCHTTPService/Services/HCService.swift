@@ -165,12 +165,13 @@ public class HCService: NSObject {
     /// - Parameters:
     ///   - strURL: First param is URL.
     ///   - path: Path param is appended to URL
-    ///   - images: Array of images fhere key is param name and value is UIImage. Images are sent to server as JPEG
+    ///   - images: Array of images where key is param name and value is UIImage. Images are sent to server as JPEG Or PNG
+    ///   - videos: Array of videos where key is param name and value is Video URL. Images are sent to server as MP4
     ///   - params: Parameters that you send as post values
     ///   - header: Additional heders that are not included in session menager
     ///   - success: Success function
     ///   - failure: Failure function
-    open func imageUploadWithURL(_ strURL: String, path: String, images:[String :UIImage], params: [String : String]?, header: [String : String]?, JPEGcompression: CGFloat = 0.7, sendAsPNG: Bool = false, success:@escaping(Any) -> Void, failure:@escaping (Any?,Int) -> Void)
+    open func mediaUploadWithURL(_ strURL: String, path: String, images:[String : UIImage] = [:], videos:[String : URL] = [:], params: [String : String]?, header: [String : String]?, JPEGcompression: CGFloat = 0.7, sendAsPNG: Bool = false, success:@escaping(Any) -> Void, failure:@escaping (Any?,Int) -> Void)
     {
         let request = try! URLRequest(url:strURL+path, method: .post, headers:header)
         
@@ -185,7 +186,12 @@ public class HCService: NSObject {
                     let fileData = UIImageJPEGRepresentation(image.value, JPEGcompression)!
                     multipartFormData.append(fileData, withName: image.key, fileName: "name", mimeType: "image/jpeg")
                 }
-                
+            }
+            
+            for video in videos {
+                if let videoData = NSData(contentsOf: video.value) {
+                    multipartFormData.append(videoData as Data, withName: video.key, fileName: "name", mimeType: "video/quicktime")
+                }
             }
             
             for (key, value) in params! {
