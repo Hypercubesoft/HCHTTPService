@@ -175,7 +175,7 @@ public class HCService: NSObject {
     {
         let request = try! URLRequest(url:strURL+path, method: .post, headers:header)
         
-        Alamofire.upload(multipartFormData: { (multipartFormData) in
+        HCService.mySessionMenager.upload(multipartFormData: { (multipartFormData) in
             
             for image in images {
                 if sendAsPNG
