@@ -2,9 +2,8 @@ Pod::Spec.new do |s|
 
 s.platform = :ios
 s.name             = "HCHTTPService"
-s.version          = "1.0.7"
+s.version          = "1.0.8"
 s.summary          = "These are internal files we use in our company."
-s.swift_version    =  "4.2"
 
 s.description      = <<-DESC
 These are internal files we use in our company. We will not add new functions on request.
