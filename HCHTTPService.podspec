@@ -2,8 +2,9 @@ Pod::Spec.new do |s|
 
 s.platform = :ios
 s.name             = "HCHTTPService"
-s.version          = "1.0.6"
+s.version          = "1.0.7"
 s.summary          = "These are internal files we use in our company."
+s.swift_version    =  "4.2"
 
 s.description      = <<-DESC
 These are internal files we use in our company. We will not add new functions on request.
@@ -19,10 +20,10 @@ s.source_files = "HCHTTPService", "HCHTTPService/*", "HCHTTPService/**/*"
 
 s.dependency 'Alamofire'
 s.dependency 'AlamofireNetworkActivityIndicator'
-s.dependency 'ReachabilitySwift'
+s.dependency 'ReachabilitySwift', '4.3.0'
 s.dependency 'HCFramework'
 s.dependency 'SDWebImage'
-s.dependency 'SwiftyJSON'
+s.dependency 'SwiftyJSON', '~> 4.2.0'
 s.dependency 'PKHUD'
 
 end

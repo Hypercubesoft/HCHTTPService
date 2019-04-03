@@ -21,17 +21,17 @@ public enum ResponseType
 
 public class HCService: NSObject {
     
-    open var token : String = ""
-    open var reachability : Reachability! = nil
+    public var token : String = ""
+    public var reachability : Reachability! = nil
     
-    open static var mySessionMenager: SessionManager! = nil
-    open static var internetOn : Bool = true
+    public static var mySessionMenager: SessionManager! = nil
+    public static var internetOn : Bool = true
     
-    open static var timeoutIntervalRequest:TimeInterval = 30
-    open static var timeoutIntervalResource:TimeInterval = 30
-    open static var contentType = "application/json"
+    public static var timeoutIntervalRequest:TimeInterval = 30
+    public static var timeoutIntervalResource:TimeInterval = 30
+    public static var contentType = "application/json"
     
-    open static let shared: HCService = {
+    public static let shared: HCService = {
     
         let instance = HCService()
         
@@ -54,7 +54,7 @@ public class HCService: NSObject {
     }()
     
     /// Setup Reachability function
-    open func setupReachability()
+    public func setupReachability()
     {
         reachability = Reachability()!
         
@@ -93,11 +93,12 @@ public class HCService: NSObject {
     ///   - params: Parameters that you send as post values
     ///   - header: Additional heders that are not included in session menager
     ///   - responseType: Select do you want JSON,Data or String response type. Default value is JSON type.
+    ///   - encoding: Select encoding type. Default is URLEncoding
     ///   - success: Success function
     ///   - failure: Failure function
-    open func requestWithURL(_ strURL: String, path: String, methodType: Alamofire.HTTPMethod, params: [String : AnyObject]?, header: [String : String]?, responseType:ResponseType = .TypeJSON, success:@escaping(Any) -> Void, failure:@escaping(Any?,Int) -> Void)
+    public func requestWithURL(_ strURL: String, path: String, methodType: Alamofire.HTTPMethod, params: [String : AnyObject]?, header: [String : String]?, responseType:ResponseType = .TypeJSON, encoding: ParameterEncoding = URLEncoding.default, success:@escaping(Any) -> Void, failure:@escaping(Any?,Int) -> Void)
     {
-        HCService.mySessionMenager.request(strURL+path, method:methodType, parameters:params, headers:header)
+        HCService.mySessionMenager.request(strURL+path, method:methodType, parameters:params, encoding: encoding, headers:header)
             .responseJSON { (responseObject) -> Void in
                 if responseType != .TypeJSON
                 {
@@ -109,13 +110,13 @@ public class HCService: NSObject {
                     return
                 }
                 
-                if responseObject.result.isSuccess && responseObject.response?.statusCode == 200 {
+                if responseObject.result.isSuccess && ((responseObject.response?.statusCode)! >= 200 && (responseObject.response?.statusCode)! < 300)  {
                     success(responseObject.data as Any)
                 } else if responseObject.result.isFailure {
                     let error : Error = responseObject.result.error!
                     print(error.localizedDescription)
                     failure(nil,0)
-                } else if responseObject.response?.statusCode != 200 {
+                } else if (responseObject.response?.statusCode)! < 200 || (responseObject.response?.statusCode)! >= 300  {
                     let statusCode = responseObject.response?.statusCode
                     
                     JSONParser.parseError(JSONData: responseObject.data)
@@ -141,13 +142,13 @@ public class HCService: NSObject {
                     return
                 }
                 
-                if responseObject.result.isSuccess && responseObject.response?.statusCode == 200 {
+                if responseObject.result.isSuccess && ((responseObject.response?.statusCode)! >= 200 && (responseObject.response?.statusCode)! < 300) {
                     success(responseObject.data as Any)
                 } else if responseObject.result.isFailure {
                     let error : Error = responseObject.result.error!
                     print(error.localizedDescription)
                     failure(nil,0)
-                } else if responseObject.response?.statusCode != 200 {
+                } else if (responseObject.response?.statusCode)! < 200 || (responseObject.response?.statusCode)! >= 300 {
                     let statusCode = responseObject.response?.statusCode
                     
                     JSONParser.parseError(JSONData: responseObject.data)
@@ -171,7 +172,7 @@ public class HCService: NSObject {
     ///   - header: Additional heders that are not included in session menager
     ///   - success: Success function
     ///   - failure: Failure function
-    open func mediaUploadWithURL(_ strURL: String, path: String, images:[String : UIImage] = [:], videos:[String : URL] = [:], params: [String : String]?, header: [String : String]?, JPEGcompression: CGFloat = 0.7, sendAsPNG: Bool = false, success:@escaping(Any) -> Void, failure:@escaping (Any?,Int) -> Void)
+    public func mediaUploadWithURL(_ strURL: String, path: String, images:[String : UIImage] = [:], videos:[String : URL] = [:], params: [String : String]?, header: [String : String]?, JPEGcompression: CGFloat = 0.7, sendAsPNG: Bool = false, success:@escaping(Any) -> Void, failure:@escaping (Any?,Int) -> Void)
     {
         let request = try! URLRequest(url:strURL+path, method: .post, headers:header)
         
@@ -180,10 +181,11 @@ public class HCService: NSObject {
             for image in images {
                 if sendAsPNG
                 {
-                    let fileData = UIImagePNGRepresentation(image.value)!
+                    
+                    let fileData = image.value.pngData()!
                     multipartFormData.append(fileData, withName: image.key, fileName: "name", mimeType: "image/png")
                 } else {
-                    let fileData = UIImageJPEGRepresentation(image.value, JPEGcompression)!
+                    let fileData = image.value.jpegData(compressionQuality: JPEGcompression)!
                     multipartFormData.append(fileData, withName: image.key, fileName: "name", mimeType: "image/jpeg")
                 }
             }
@@ -208,7 +210,7 @@ public class HCService: NSObject {
                         let error : Error = response.result.error!
                         print(error.localizedDescription)
                         failure(nil,0)
-                    } else if response.response?.statusCode == 200
+                    } else if (response.response?.statusCode)! >= 200 && (response.response?.statusCode)! < 300
                     {
                         success(response.data as Any)
                     } else {
