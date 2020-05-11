@@ -21,42 +21,37 @@ public enum ResponseType
 
 public class HCService: NSObject {
     
-    public var token : String = ""
-    public var reachability : Reachability! = nil
+    open var reachability : Reachability! = nil
     
-    public static var mySessionMenager: SessionManager! = nil
-    public static var internetOn : Bool = true
+    var mySessionManager: Session!
+    public var internetOn : Bool = true
     
-    public static var timeoutIntervalRequest:TimeInterval = 30
-    public static var timeoutIntervalResource:TimeInterval = 30
-    public static var contentType = "application/json"
-    
-    public static let shared: HCService = {
-    
-        let instance = HCService()
+    public init(timeoutIntervalRequest: Double = 30, timeoutIntervalResource: Double = 30, contentType: String = "application/json") {
+        super.init()
         
-        var defaultHeaders = Alamofire.SessionManager.defaultHTTPHeaders
+        var defaultHeaders = URLSessionConfiguration.default.headers
         defaultHeaders["Content-Type"] = contentType
         
         let configuration = URLSessionConfiguration.default
-        configuration.httpAdditionalHeaders = defaultHeaders
+        configuration.headers = defaultHeaders
         
         configuration.timeoutIntervalForRequest = timeoutIntervalRequest
         configuration.timeoutIntervalForResource = timeoutIntervalResource
         
-        mySessionMenager = Alamofire.SessionManager(configuration: configuration)
-    
+        mySessionManager = Alamofire.Session(configuration: configuration)
+        
         NetworkActivityIndicatorManager.shared.isEnabled = true
         
-        instance.setupReachability()
+        setupReachability()
         
-        return instance
-    }()
+    }
     
     /// Setup Reachability function
-    public func setupReachability()
+    open func setupReachability()
     {
-        reachability = Reachability()!
+        reachability = try! Reachability()
+        
+        internetOn = reachability.connection != .unavailable
         
         reachability.whenReachable = { reachability in
             DispatchQueue.main.async() {
@@ -65,14 +60,14 @@ public class HCService: NSObject {
                 } else {
                     print("Reachable via Cellular")
                 }
-                HCService.internetOn = true;
+                self.internetOn = true;
                 HCAppNotify.postNotification("internetOn")
             }
         }
         reachability.whenUnreachable = { reachability in
             DispatchQueue.main.async() {
                 print("Not reachable")
-                HCService.internetOn = false;
+                self.internetOn = false;
                 HCAppNotify.postNotification("internetOff")
             }
         }
@@ -91,74 +86,100 @@ public class HCService: NSObject {
     ///   - path: Path param is appended to URL
     ///   - methodType: HTTP Method. Can be .post, .get, .put...
     ///   - params: Parameters that you send as post values
-    ///   - header: Additional heders that are not included in session menager
+    ///   - header: Additional headers that are not included in session manager
     ///   - responseType: Select do you want JSON,Data or String response type. Default value is JSON type.
     ///   - encoding: Select encoding type. Default is URLEncoding
+    ///   - sendUnauthorized: set true to post Unauthorized notification in case of unauthorized error
+    ///   - unauthorizedCode: HTTP status code for unauthorized error
     ///   - success: Success function
     ///   - failure: Failure function
-    public func requestWithURL(_ strURL: String, path: String, methodType: Alamofire.HTTPMethod, params: [String : AnyObject]?, header: [String : String]?, responseType:ResponseType = .TypeJSON, encoding: ParameterEncoding = URLEncoding.default, success:@escaping(Any) -> Void, failure:@escaping(Any?,Int) -> Void)
+    
+    open func requestWithURL(_ strURL: String, path: String, methodType: Alamofire.HTTPMethod, params: [String : AnyObject]?, header: [String : String]?, responseType:ResponseType = .TypeJSON, encoding: ParameterEncoding = URLEncoding.default, sendUnauthorized:Bool = true, unauthorizedCode:Int = 401, success:@escaping(Any) -> Void, failure:@escaping(Any?,Int) -> Void)
     {
-        HCService.mySessionMenager.request(strURL+path, method:methodType, parameters:params, encoding: encoding, headers:header)
-            .responseJSON { (responseObject) -> Void in
+        var targetUrl = strURL+path
+        targetUrl = targetUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+        
+        let url = NSURL(string: targetUrl)
+        
+        if url == nil {
+            failure(nil, -1)
+            return
+        }
+        let urlComponents = URLComponents(url: url! as URL, resolvingAgainstBaseURL: true)!
+        
+        mySessionManager.request(urlComponents as URLConvertible, method: methodType, parameters: params, encoding: encoding, headers: header == nil ? nil : HTTPHeaders(header!), interceptor: nil, requestModifier: nil)
+            .responseJSON { responseObject in
                 if responseType != .TypeJSON
                 {
                     return
                 }
-                if responseObject.response?.statusCode == 401
+                if responseObject.response?.statusCode == unauthorizedCode
                 {
-                    HCAppNotify.postNotification("Unauthorized")
+                    failure(responseObject.data as Any, unauthorizedCode)
+                    if sendUnauthorized
+                    {
+                        HCAppNotify.postNotification("Unauthorized")
+                    }
                     return
                 }
                 
-                if responseObject.result.isSuccess && ((responseObject.response?.statusCode)! >= 200 && (responseObject.response?.statusCode)! < 300)  {
-                    success(responseObject.data as Any)
-                } else if responseObject.result.isFailure {
-                    let error : Error = responseObject.result.error!
-                    print(error.localizedDescription)
-                    failure(nil,0)
-                } else if (responseObject.response?.statusCode)! < 200 || (responseObject.response?.statusCode)! >= 300  {
+                switch responseObject.result {
+                    case .success(_):
+                        if responseObject.response?.statusCode == 200 {
+                            success(responseObject.data as Any)
+                    }
+                    case let .failure(error):
+                        print(error.localizedDescription)
+                        failure(nil,0)
+                }
+                
+                if responseObject.response?.statusCode != 200 {
                     let statusCode = responseObject.response?.statusCode
-                    
                     JSONParser.parseError(JSONData: responseObject.data)
-                    
-                    failure(responseObject.data as Any, statusCode!)
-                }
-            } .responseString { (responseObject) -> Void in
-                if responseType != .TypeString
-                {
-                    return
-                }
-                print("****** responseString ******")
-                print(responseObject)
-                
-            } .responseData { (responseObject) -> Void in
-                if responseType != .TypeData
-                {
-                    return
-                }
-                if responseObject.response?.statusCode == 401
-                {
-                    HCAppNotify.postNotification("Unauthorized")
-                    return
-                }
-                
-                if responseObject.result.isSuccess && ((responseObject.response?.statusCode)! >= 200 && (responseObject.response?.statusCode)! < 300) {
-                    success(responseObject.data as Any)
-                } else if responseObject.result.isFailure {
-                    let error : Error = responseObject.result.error!
-                    print(error.localizedDescription)
-                    failure(nil,0)
-                } else if (responseObject.response?.statusCode)! < 200 || (responseObject.response?.statusCode)! >= 300 {
-                    let statusCode = responseObject.response?.statusCode
-                    
-                    JSONParser.parseError(JSONData: responseObject.data)
-                    
                     failure(responseObject.data as Any, statusCode!)
                 }
                 
-            } /*.response { (responseObject) -> Void in
-                print("response")
-        }*/
+                
+        } .responseString { (responseObject) -> Void in
+            if responseType != .TypeString
+            {
+                return
+            }
+            print("****** responseString ******")
+            print(responseObject)
+            
+        } .responseData { (responseObject) -> Void in
+            if responseType != .TypeData
+            {
+                return
+            }
+            if responseObject.response?.statusCode == unauthorizedCode
+            {
+                failure(responseObject.data as Any, unauthorizedCode)
+                if sendUnauthorized
+                {
+                    HCAppNotify.postNotification("Unauthorized")
+                }
+                return
+            }
+            
+            switch responseObject.result {
+                case .success(_):
+                    if responseObject.response?.statusCode == 200 {
+                        success(responseObject.data as Any)
+                }
+                case let .failure(error):
+                    print(error.localizedDescription)
+                    failure(nil,0)
+            }
+            
+            if responseObject.response?.statusCode != 200 {
+                let statusCode = responseObject.response?.statusCode
+                JSONParser.parseError(JSONData: responseObject.data)
+                failure(responseObject.data as Any, statusCode!)
+            }
+            
+        }
     }
     
     /// Function to upload multiple images to server.
@@ -169,19 +190,22 @@ public class HCService: NSObject {
     ///   - images: Array of images where key is param name and value is UIImage. Images are sent to server as JPEG Or PNG
     ///   - videos: Array of videos where key is param name and value is Video URL. Images are sent to server as MP4
     ///   - params: Parameters that you send as post values
-    ///   - header: Additional heders that are not included in session menager
+    ///   - header: Additional headers that are not included in session manager
+    ///   - JPEGcompression: quality for JPEG image
+    ///   - sendAsPNG: send image as PNG
+    ///   - sendUnauthorized: set true to post Unauthorized notification in case of unauthorized error
+    ///   - unauthorizedCode: HTTP status code for unauthorized error
     ///   - success: Success function
     ///   - failure: Failure function
-    public func mediaUploadWithURL(_ strURL: String, path: String, images:[String : UIImage] = [:], videos:[String : URL] = [:], params: [String : String]?, header: [String : String]?, JPEGcompression: CGFloat = 0.7, sendAsPNG: Bool = false, success:@escaping(Any) -> Void, failure:@escaping (Any?,Int) -> Void)
+    open func mediaUploadWithURL(_ strURL: String, path: String, images:[String : UIImage] = [:], videos:[String : URL] = [:], params: [String : String]?, header: [String : String]?, JPEGcompression: CGFloat = 0.7, sendAsPNG: Bool = false, sendUnauthorized:Bool = true, unauthorizedCode:Int = 401, success:@escaping(Any) -> Void, failure:@escaping (Any?,Int) -> Void)
     {
-        let request = try! URLRequest(url:strURL+path, method: .post, headers:header)
+        let request = try! URLRequest(url:strURL+path, method: .post, headers:header == nil ? nil : HTTPHeaders(header!))
         
-        HCService.mySessionMenager.upload(multipartFormData: { (multipartFormData) in
+        mySessionManager.upload(multipartFormData: { (multipartFormData) in
             
             for image in images {
                 if sendAsPNG
                 {
-                    
                     let fileData = image.value.pngData()!
                     multipartFormData.append(fileData, withName: image.key, fileName: "name", mimeType: "image/png")
                 } else {
@@ -199,29 +223,36 @@ public class HCService: NSObject {
             for (key, value) in params! {
                 multipartFormData.append(value.data(using: String.Encoding.utf8)!, withName: key)
             }
-        }, with: request, encodingCompletion: { (result) in
+        }, with: request as URLRequestConvertible).responseJSON(completionHandler: { responseObject in
             
-            switch result {
-            case .success(let upload, _, _):
-                upload.responseJSON { response in
-                    
-                    if response.result.isFailure
-                    {
-                        let error : Error = response.result.error!
-                        print(error.localizedDescription)
-                        failure(nil,0)
-                    } else if (response.response?.statusCode)! >= 200 && (response.response?.statusCode)! < 300
-                    {
-                        success(response.data as Any)
-                    } else {
-                        let statusCode = response.response?.statusCode
-                        failure(response.data,statusCode!)
-                    }
+            if responseObject.response?.statusCode == unauthorizedCode
+            {
+                failure(responseObject.data as Any, unauthorizedCode)
+                if sendUnauthorized
+                {
+                    HCAppNotify.postNotification("Unauthorized")
                 }
-            case .failure( _):
-                failure(nil,0)
+                return
             }
             
+            switch responseObject.result {
+                case .success(_):
+                    if responseObject.response?.statusCode == 200 {
+                        success(responseObject.data as Any)
+                }
+                case let .failure(error):
+                    print(error.localizedDescription)
+                    failure(nil,0)
+            }
+            
+            if responseObject.response?.statusCode != 200 {
+                let statusCode = responseObject.response?.statusCode
+                JSONParser.parseError(JSONData: responseObject.data)
+                failure(responseObject.data as Any, statusCode!)
+            }
+            
+        }).uploadProgress(queue: .main, closure: { progress in
+            print("Upload Progress: \(progress.fractionCompleted)")
         })
     }
 }

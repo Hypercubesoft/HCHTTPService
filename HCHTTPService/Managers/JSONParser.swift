@@ -9,7 +9,7 @@ import Foundation
 import SwiftyJSON
 
 open class JSONParser {
-
+    
     // MARK: - ERROR
     public static func parseError(JSONData: Data?)
     {
@@ -45,4 +45,29 @@ open class JSONParser {
             print(json)
         }
     }
+    
+    public static func getJSONFromData(_ JSONData: Data?) -> JSON {
+        let json:JSON = {
+            do {
+                if let jsonData = JSONData
+                {
+                    return try JSON(data: jsonData)
+                }
+                return JSON()
+            }
+            catch let error
+            {
+                print(error.localizedDescription)
+                return JSON()
+            }
+        }()
+        return json
+    }
+    
+    public static func printResponse(JSONData: Data?)
+    {
+        let json:JSON = getJSONFromData(JSONData)
+        print(json)
+    }
 }
+

@@ -44,7 +44,7 @@ open class HCImageDL: NSObject {
     ///   - showProgressIndicator: Defines is Progress Indicator shown. Default value is false.
     ///   - options: SDImageOptionType values. By default, this array is empty.
     ///   - completed: Function that runs when the image is set. Default completion function is not set.
-    public func setImageFromURL(imageView:UIImageView, url: String, placeholder: String = "placeholder", showProgressIndicator: Bool = false, options: [SDImageOptionType] = [], completed:((UIImage,Bool) -> Swift.Void)? = nil)
+    open func setImageFromURL(imageView:UIImageView, url: String, placeholder: String = "placeholder", showProgressIndicator: Bool = false, options: [SDImageOptionType] = [], completed:((UIImage,Bool) -> Swift.Void)? = nil)
     {
         if showProgressIndicator
         {
@@ -75,7 +75,7 @@ open class HCImageDL: NSObject {
     ///   - url: URL image source
     ///   - options: SDImageOptionType values. By default, this array is empty.
     ///   - completed: Function that runs when the image is downloaded. Default completion function is not set.
-    public func downloadImageFromURL(url: String, options: [SDImageOptionType] = [], completed:((UIImage,Bool) -> Swift.Void)? = nil)
+    open func downloadImageFromURL(url: String, options: [SDImageOptionType] = [], completed:((UIImage,Bool) -> Swift.Void)? = nil)
     {
         let manager = SDWebImageManager.shared
         manager.loadImage(with: URL(string: url),
@@ -105,7 +105,7 @@ open class HCImageDL: NSObject {
     ///   - url: URL image source
     ///   - removeFromDisk: Defines whether the image will be deleted from Disk. Default value is true.
     ///   - completed: Function that runs when the image is deleted. Default completion function is not set.
-    public func removeImageFromCache(url: String, removeFromDisk: Bool = true, completed:(() -> Swift.Void)? = nil)
+    open func removeImageFromCache(url: String, removeFromDisk: Bool = true, completed:(() -> Swift.Void)? = nil)
     {
         let cache = SDImageCache.shared
         cache.removeImage(forKey: url, fromDisk:removeFromDisk, withCompletion: {() in
@@ -120,7 +120,7 @@ open class HCImageDL: NSObject {
     /// Remove all Images from cache. Also this function have possibility to set completion function. Default completion function is not set.
     ///
     /// - Parameter completed: Function that runs when all images are deleted. Default completion function is not set.
-    public func removeAllImagesFromCache(completed:(() -> Swift.Void)? = nil)
+    open func removeAllImagesFromCache(completed:(() -> Swift.Void)? = nil)
     {
         let cache = SDImageCache.shared
         cache.clearDisk(onCompletion: {() in
@@ -137,7 +137,7 @@ open class HCImageDL: NSObject {
     ///
     /// - Parameter options: SDImageOptionType enumeration values array
     /// - Returns: Converted SDWebImageOptions array
-    public func makeOptionsArrayForImage(_ options: [SDImageOptionType]) -> SDWebImageOptions
+    open func makeOptionsArrayForImage(_ options: [SDImageOptionType]) -> SDWebImageOptions
     {
         if options == []
         {
@@ -147,33 +147,33 @@ open class HCImageDL: NSObject {
         for option in options
         {
             switch option {
-            case .RetryFailed:
-                readyOptions.insert(SDWebImageOptions.retryFailed)
-            case .LowPriority:
-                readyOptions.insert(SDWebImageOptions.lowPriority)
-            case .CacheMemoryOnly:
-                print("No option CacheMemoryOnly")
+                case .RetryFailed:
+                    readyOptions.insert(SDWebImageOptions.retryFailed)
+                case .LowPriority:
+                    readyOptions.insert(SDWebImageOptions.lowPriority)
+                case .CacheMemoryOnly:
+                    print("No option CacheMemoryOnly")
                 //readyOptions.insert(SDWebImageOptions.cacheMemoryOnly)
-            case .ProgressiveDownload:
-                readyOptions.insert(SDWebImageOptions.progressiveLoad)
-            case .RefreshCached:
-                readyOptions.insert(SDWebImageOptions.refreshCached)
-            case .ContinueInBackground:
-                readyOptions.insert(SDWebImageOptions.continueInBackground)
-            case .HandleCookies:
-                readyOptions.insert(SDWebImageOptions.handleCookies)
-            case .AllowInvalidSSLCertificates:
-                readyOptions.insert(SDWebImageOptions.allowInvalidSSLCertificates)
-            case .HighPriority:
-                readyOptions.insert(SDWebImageOptions.highPriority)
-            case .DelayPlaceholder:
-                readyOptions.insert(SDWebImageOptions.delayPlaceholder)
-            case .TransformAnimatedImage:
-                readyOptions.insert(SDWebImageOptions.transformAnimatedImage)
-            case .AvoidAutoSetImage:
-                readyOptions.insert(SDWebImageOptions.avoidAutoSetImage)
-            case .ScaleDownLargeImages:
-                readyOptions.insert(SDWebImageOptions.scaleDownLargeImages)
+                case .ProgressiveDownload:
+                    readyOptions.insert(SDWebImageOptions.progressiveLoad)
+                case .RefreshCached:
+                    readyOptions.insert(SDWebImageOptions.refreshCached)
+                case .ContinueInBackground:
+                    readyOptions.insert(SDWebImageOptions.continueInBackground)
+                case .HandleCookies:
+                    readyOptions.insert(SDWebImageOptions.handleCookies)
+                case .AllowInvalidSSLCertificates:
+                    readyOptions.insert(SDWebImageOptions.allowInvalidSSLCertificates)
+                case .HighPriority:
+                    readyOptions.insert(SDWebImageOptions.highPriority)
+                case .DelayPlaceholder:
+                    readyOptions.insert(SDWebImageOptions.delayPlaceholder)
+                case .TransformAnimatedImage:
+                    readyOptions.insert(SDWebImageOptions.transformAnimatedImage)
+                case .AvoidAutoSetImage:
+                    readyOptions.insert(SDWebImageOptions.avoidAutoSetImage)
+                case .ScaleDownLargeImages:
+                    readyOptions.insert(SDWebImageOptions.scaleDownLargeImages)
             }
         }
         return readyOptions
