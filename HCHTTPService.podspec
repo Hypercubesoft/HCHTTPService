@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
 
 s.platform = :ios
 s.name             = "HCHTTPService"
-s.version          = "1.1.1"
+s.version          = "1.1.2"
 s.swift_versions = ['5.0']
 s.summary          = "These are internal files we use in our company."
 

@@ -91,10 +91,11 @@ public class HCService: NSObject {
     ///   - encoding: Select encoding type. Default is URLEncoding
     ///   - sendUnauthorized: set true to post Unauthorized notification in case of unauthorized error
     ///   - unauthorizedCode: HTTP status code for unauthorized error
+    ///   - responseType: Custom RequestInterceptor
     ///   - success: Success function
     ///   - failure: Failure function
     
-    open func requestWithURL(_ strURL: String, path: String, methodType: Alamofire.HTTPMethod, params: [String : AnyObject]?, header: [String : String]?, responseType:ResponseType = .TypeJSON, encoding: ParameterEncoding = URLEncoding.default, sendUnauthorized:Bool = true, unauthorizedCode:Int = 401, success:@escaping(Any) -> Void, failure:@escaping(Any?,Int) -> Void)
+    open func requestWithURL(_ strURL: String, path: String, methodType: Alamofire.HTTPMethod, params: [String : AnyObject]?, header: [String : String]?, responseType:ResponseType = .TypeJSON, encoding: ParameterEncoding = URLEncoding.default, sendUnauthorized:Bool = true, unauthorizedCode:Int = 401, requestInterceptor:RequestInterceptor? = nil, success:@escaping(Any) -> Void, failure:@escaping(Any?,Int) -> Void)
     {
         var targetUrl = strURL+path
         targetUrl = targetUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
@@ -107,7 +108,7 @@ public class HCService: NSObject {
         }
         let urlComponents = URLComponents(url: url! as URL, resolvingAgainstBaseURL: true)!
         
-        mySessionManager.request(urlComponents as URLConvertible, method: methodType, parameters: params, encoding: encoding, headers: header == nil ? nil : HTTPHeaders(header!), interceptor: nil, requestModifier: nil)
+        mySessionManager.request(urlComponents as Alamofire.URLConvertible, method: methodType, parameters: params, encoding: encoding, headers: header == nil ? nil : HTTPHeaders(header!), interceptor: requestInterceptor, requestModifier: nil)
             .responseJSON { responseObject in
                 if responseType != .TypeJSON
                 {
@@ -125,12 +126,15 @@ public class HCService: NSObject {
                 
                 switch responseObject.result {
                     case .success(_):
-                        if responseObject.response?.statusCode == 200 {
+                        let statusCode = responseObject.response?.statusCode
+                        if statusCode != nil && statusCode! >= 200 && statusCode! < 300 {
                             success(responseObject.data as Any)
+                            return
                     }
                     case let .failure(error):
                         print(error.localizedDescription)
                         failure(nil,0)
+                        return
                 }
                 
                 if responseObject.response?.statusCode != 200 {
@@ -145,8 +149,34 @@ public class HCService: NSObject {
             {
                 return
             }
-            print("****** responseString ******")
-            print(responseObject)
+            if responseObject.response?.statusCode == unauthorizedCode
+            {
+                failure(responseObject.data as Any, unauthorizedCode)
+                if sendUnauthorized
+                {
+                    HCAppNotify.postNotification("Unauthorized")
+                }
+                return
+            }
+            
+            switch responseObject.result {
+                case .success(_):
+                    let statusCode = responseObject.response?.statusCode
+                    if statusCode != nil && statusCode! >= 200 && statusCode! < 300 {
+                        success(responseObject.data as Any)
+                        return
+                }
+                case let .failure(error):
+                    print(error.localizedDescription)
+                    failure(nil,0)
+                    return
+            }
+            
+            if responseObject.response?.statusCode != 200 {
+                let statusCode = responseObject.response?.statusCode
+                JSONParser.parseError(JSONData: responseObject.data)
+                failure(responseObject.data as Any, statusCode!)
+            }
             
         } .responseData { (responseObject) -> Void in
             if responseType != .TypeData
@@ -165,12 +195,15 @@ public class HCService: NSObject {
             
             switch responseObject.result {
                 case .success(_):
-                    if responseObject.response?.statusCode == 200 {
+                    let statusCode = responseObject.response?.statusCode
+                    if statusCode != nil && statusCode! >= 200 && statusCode! < 300 {
                         success(responseObject.data as Any)
+                        return
                 }
                 case let .failure(error):
                     print(error.localizedDescription)
                     failure(nil,0)
+                    return
             }
             
             if responseObject.response?.statusCode != 200 {
@@ -237,12 +270,15 @@ public class HCService: NSObject {
             
             switch responseObject.result {
                 case .success(_):
-                    if responseObject.response?.statusCode == 200 {
+                    let statusCode = responseObject.response?.statusCode
+                    if statusCode != nil && statusCode! >= 200 && statusCode! < 300 {
                         success(responseObject.data as Any)
+                        return
                 }
                 case let .failure(error):
                     print(error.localizedDescription)
                     failure(nil,0)
+                    return
             }
             
             if responseObject.response?.statusCode != 200 {
